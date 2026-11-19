@@ -26,6 +26,7 @@ models:
     input_per_mtok: 0.30
     cached_input_per_mtok: 0.075
     output_per_mtok: 2.50
+    reasoning_separate: true   # Gemini reports thinking tokens outside the output count
     notes: "PLACEHOLDER - verify before spending"
 
   # --- open-weight, self-served: cost is GPU time, not per-token ---

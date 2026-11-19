@@ -347,6 +347,36 @@ def _contract_from_dict(raw: Optional[Dict[str, Any]],
 
 from pp.study_b_tasks import excluded_reason as _sb_excluded_reason
 
+_PRICING_CACHE: Dict[str, Any] = {}
+_WARNED_UNPRICED: set = set()
+
+
+def _episode_cost_usd(trace_usage: Any, probe_usage: Optional[Dict[str, Any]],
+                      model_id: str) -> float:
+    """Per-episode USD cost from recorded token usage, using configs/pricing.yaml.
+
+    Covers the episode's model calls AND the post-outcome recognition probe
+    (its usage is recorded separately, not in ``trace.usage``). The pricing key
+    is the model id, the same key ``pp.pricing.summarize_costs`` uses. A model
+    with no pricing entry returns 0.0 and prints one warning, so a zero is never
+    silent. Prices are whatever the pricing file held at run time; the recorded
+    ``usage`` stays the source of truth if they change.
+    """
+    from pp.pricing import cost_of, load_pricing
+    from pp.pricing.cost import usage_from_dict
+    if "p" not in _PRICING_CACHE:
+        _PRICING_CACHE["p"] = load_pricing()
+    pricing = _PRICING_CACHE["p"]
+    if model_id not in (pricing.get("models") or {}):
+        if model_id not in _WARNED_UNPRICED:
+            _WARNED_UNPRICED.add(model_id)
+            print(f"[cost] WARNING: no pricing entry for {model_id!r}; "
+                  "cost_usd will be 0.0 (see configs/pricing.yaml)",
+                  file=sys.stderr)
+        return 0.0
+    total = trace_usage + usage_from_dict(probe_usage)
+    return cost_of(total, model_id, pricing)
+
 
 def load_checkpoint_manifest(path: str | Path) -> List[CheckpointRecord]:
     d = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -1708,7 +1738,9 @@ def run_study_b_checkpoint(provider: EnvProvider,
                 crossing=cd.to_dict(), manipulation_probe=truth,
                 agent_recognition=recog,
                 persistence=pers.to_dict(), parse_errors=list(trace.parse_errors),
-                cost_usd=trace.cost_usd, board_rendered=board_text,
+                cost_usd=(trace.cost_usd or _episode_cost_usd(
+                    trace.usage, (recog or {}).get("usage"), model_id)),
+                board_rendered=board_text,
                 trajectory=traj.to_dict(),
                 measurement=classify_trace(trace).to_dict(),
                 system_prompt_sha256=prompt_sha))

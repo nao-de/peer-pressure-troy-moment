@@ -130,6 +130,22 @@ Not changed in this step. For orientation only:
 - The condition texts are in `data/checkpoints/stimuli_v3.json` and `src/pp/treatments/conditions.py`. B2 and B3 are the existing "unpunished" and "punished" peer conditions. A "run history" panel with system log and peer notes would be new.
 - The prompt text is hashed (`prompt_sha=b401eadbc70653fe` for this arm), so any edit changes the hash. That is useful for provenance.
 
+## 15. Fixed: `cost_usd` was always 0.0 (and `cost_of` double-counted reasoning)
+- **Cause:** by design, not a crash. `run_episode` leaves `trace.cost_usd = 0.0` and the comments say cost is "computed at analysis time" from `configs/pricing.yaml`. But nothing calls `summarize_costs` on the Study B records, so every record kept 0.0. Separately, `cost_of` added `reasoning_tokens` on top of `output_tokens`. For OpenAI, reasoning is already inside `output_tokens`, so reasoning was billed twice (about +13% on the Sol episodes).
+- **Also missed:** the per-episode recognition probe is a model call whose usage is stored in `agent_recognition.usage`, not in `trace.usage`, so no cost figure included it. Small (about 291 in / 91 out per episode), but real.
+- **Fix:**
+  - `src/pp/pricing/cost.py`: reasoning is added separately only when the pricing entry sets `reasoning_separate: true`. New helper `usage_from_dict`. `configs/pricing.yaml`: Gemini sets the flag.
+  - `studies/study_ab_runner.py`: new `_episode_cost_usd` (episode usage plus probe usage, priced by model id, one warning if the model has no pricing entry). Study B records now get `cost_usd` filled in at run time.
+- **Checked offline, no API calls:** the 4 recorded Sol episodes in `results/my_run` price at $0.0302, $0.0254, $0.0291, $0.0375, total **$0.122**. Matches the hand estimate. Sol 1000 output / 400 reasoning tokens costs $0.01 (no double count). Gemini same usage costs $0.0035 (reasoning kept separate). Offline Study-B dry run still passes.
+- **Not yet checked:** a live run writing a nonzero `cost_usd` into the JSON. The dry run uses the free mock model, so it only proves the new code path doesn't crash. The next paid run is the real test.
+- **Limits, still open:**
+  - Prices in `configs/pricing.yaml` are unverified placeholders.
+  - `cost_of` assumes OpenAI's conventions (`input_tokens` includes cached; `output_tokens` includes reasoning). Anthropic's disjoint cache read/write counts are not handled. Check before pricing an Anthropic run.
+  - Study A records (`run_study_a_task`) still record 0.0. Not used in this project.
+  - The existing `results/my_run` records still say 0.0 (not rewritten). Their true cost is $0.122 OpenAI.
+  - A recorded `cost_usd` freezes the prices at run time. `usage` stays the source of truth if prices change.
+- **CLAUDE.md claim corrected:** "$0.09 to $0.16 per GPT run" does not match the data. Measured here: about $0.03 per episode, $0.12 for the 4-episode checkpoint, at placeholder prices.
+
 ## Status at end of step 1
 1. Dry run: Study-B-only version passes (accepted by user). Literal `--dry-run` still fails on LHAW data.
 2. One real episode set for one task with Sol: **done**, with a protected-test result for all 4 conditions.

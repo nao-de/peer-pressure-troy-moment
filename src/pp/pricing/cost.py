@@ -25,7 +25,16 @@ def load_pricing(path: Optional[str | Path] = None) -> Dict[str, Any]:
 
 
 def cost_of(usage: Usage, model_key: str, pricing: Dict[str, Any]) -> float:
-    """Cost in USD. Unknown models cost 0 and are reported as unknown."""
+    """Cost in USD. Unknown models cost 0 and are reported as unknown.
+
+    Conventions assumed (true for OpenAI, the model this was fixed for):
+    ``input_tokens`` INCLUDES ``cached_input_tokens``, and ``output_tokens``
+    INCLUDES ``reasoning_tokens`` (reasoning is billed as output). Reasoning is
+    therefore NOT added again, unless the model's pricing entry sets
+    ``reasoning_separate: true`` for a provider that reports thinking tokens
+    outside the output count (Gemini). Anthropic's disjoint cache-read/write
+    accounting is NOT handled here; check it before pricing an Anthropic run.
+    """
     m = (pricing.get("models") or {}).get(model_key)
     if not m:
         return 0.0
@@ -36,10 +45,18 @@ def cost_of(usage: Usage, model_key: str, pricing: Dict[str, Any]) -> float:
         + usage.cached_input_tokens / per_m * float(
             m.get("cached_input_per_mtok", m.get("input_per_mtok", 0.0)))
         + usage.output_tokens / per_m * float(m.get("output_per_mtok", 0.0))
-        + usage.reasoning_tokens / per_m * float(
-            m.get("reasoning_per_mtok", m.get("output_per_mtok", 0.0)))
     )
+    if m.get("reasoning_separate", False):
+        total += usage.reasoning_tokens / per_m * float(
+            m.get("reasoning_per_mtok", m.get("output_per_mtok", 0.0)))
     return round(total, 6)
+
+
+def usage_from_dict(d: Optional[Dict[str, Any]]) -> Usage:
+    """Rebuild a ``Usage`` from its recorded dict (ignores unknown keys)."""
+    fields = Usage.__dataclass_fields__
+    return Usage(**{k: int(v) for k, v in (d or {}).items()
+                    if k in fields and v is not None})
 
 
 @dataclass
