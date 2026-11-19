@@ -1,3 +1,13 @@
+> **About this repository.** This is a working copy of the authors' public
+> artifact, used for a BlueDot Technical AI Safety project on peer influence
+> in agent rule-breaking. The code, data, and recorded results below are theirs:
+> [para2046/troy-moment](https://github.com/para2046/troy-moment) at commit
+> `3c6f15b`, MIT licensed (see `LICENSE`). The paper is
+> [arXiv:2609.15494v3](https://arxiv.org/abs/2609.15494v3); cite version 3,
+> because version 2 reported different results.
+> Notes from getting the base code running once are in `STUCK_LOG.md`.
+> The README text below is the authors' original, unchanged.
+
 # The Troy Moment — Code and Data
 
 Artifact for the paper **"The Troy Moment: Conflict Resolution Under Impossible
