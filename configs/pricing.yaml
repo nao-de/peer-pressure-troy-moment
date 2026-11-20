@@ -11,10 +11,14 @@ models:
 
   # --- closed / API (IDs are configuration, see configs/models/) ---
   gpt-5.6-sol:
-    input_per_mtok: 1.25
-    cached_input_per_mtok: 0.125
-    output_per_mtok: 10.00
-    notes: "PLACEHOLDER - verify before spending"
+    # LIST price (USD per 1M tokens) per OpenAI's model page and pricing tables, checked 2026-11-19.
+    # A promotion at $4 in / $20 out runs "at least through 2026-11-21"; its cached rate is unpublished.
+    # Re-verify at https://developers.openai.com/api/docs/pricing. The original placeholders
+    # ($1.25 / $0.125 / $10) were 3-4x too low.
+    input_per_mtok: 5.00
+    cached_input_per_mtok: 0.50
+    output_per_mtok: 30.00
+    notes: "list price, verified 2026-11-19; promo $4/$20 through >= 2026-11-21"
 
   claude-fable-5.1:
     input_per_mtok: 3.00

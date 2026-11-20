@@ -59,7 +59,7 @@ total for this step. Never print, log, or commit API keys.
     --only-benchmark impossible --max-turns 50 --resume --out results/my_run
 - Known gaps: the README mentions a `tests/` suite that is not in the repo.
   configs/pricing.yaml prices are placeholders. The paper's recorded runs cost roughly
-  $0.09 to $0.16 per GPT run at those prices (not reproduced: step 1 measured about
-  $0.03 per episode, $0.12 for the 4-episode checkpoint, at the placeholder prices).
+  $0.09 to $0.16 per GPT run at those prices (plausible: step 1 measured about $0.09 to $0.12
+  per episode at OpenAI's real list prices; the shipped placeholders are 3-4x too low, see STUCK_LOG entry 16).
 - Recorded results from the paper are in results/ (e.g. results/B_v3_oursopen/sol/).
   Compare my run's output format against these.
